@@ -171,9 +171,6 @@ daylight=$((SUN_ELEV > SUN_MIN_ELEV ? 1 : 0))
 if [ "${ENABLE_MQTT}" == "true" ]; then
   log "MQTT enabled" "INFO"
 
-  # Publish recording status
-  "$SCRIPTS_DIR/mqtt.sh" "iotstack/antenna/status" "recording"
-
   # Publish data
   PAYLOAD=$(jq -n \
       --arg sat_number "$SAT_NUMBER" \
@@ -375,12 +372,13 @@ else
   log "Invalid NOAA_DECODER value: $NOAA_DECODER" "INFO"
 
   # Publish to MQTT
-  if [ "${ENABLE_MQTT}" == "true" ]; then
-    log "MQTT enabled" "INFO"
-    PAYLOAD="failed"
-
-    "$SCRIPTS_DIR/mqtt.sh" "iotstack/antenna/status" "$PAYLOAD"
-  fi
+  PAYLOAD=$(jq -n \
+      --arg sat_number "$SAT_NUMBER" \
+      --arg pass_direction "$PASS_DIRECTION" \
+      --arg pass_side "$PASS_SIDE" \
+      --arg status "failed" \
+      '{enable_mqtt: true, satellite: {number: $sat_number, direction: $pass_direction, side: $pass_side}, status: $status}')
+  "$SCRIPTS_DIR/mqtt.sh" "iotstack/antenna/data" "$PAYLOAD"
   exit 1
 fi
 
@@ -556,9 +554,6 @@ fi
 # Publish to MQTT
 if [ "${ENABLE_MQTT}" == "true" ]; then
   log "MQTT enabled" "INFO"
-  PAYLOAD="success"
-  "$SCRIPTS_DIR/mqtt.sh" "iotstack/antenna/status" "$PAYLOAD"
-
   PAYLOAD=$(jq -n \
       --arg sat_number "$SAT_NUMBER" \
       --arg pass_direction "$PASS_DIRECTION" \
