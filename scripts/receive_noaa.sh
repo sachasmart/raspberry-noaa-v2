@@ -539,6 +539,18 @@ if [ -n "$(find /srv/images -maxdepth 1 -type f -name "$(basename "$IMAGE_FILE_B
       ${PUSH_PROC_DIR}/push_discord.sh "$DISCORD_NOAA_WEBHOOK" "$i" "${push_annotation}" >> $NOAA_LOG 2>&1
     done
   fi
+
+  # Publish to MQTT
+  if [ "${ENABLE_MQTT}" == "true" ]; then
+    log "MQTT enabled" "INFO"
+    PAYLOAD=$(jq -n \
+        --arg sat_number "$SAT_NUMBER" \
+        --arg pass_direction "$PASS_DIRECTION" \
+        --arg pass_side "$PASS_SIDE" \
+        --arg status "success" \
+        '{enable_mqtt: true, satellite: {number: $sat_number, direction: $pass_direction, side: $pass_side}, status: $status}')
+    "$SCRIPTS_DIR/mqtt.sh" "iotstack/antenna/data" "$PAYLOAD"
+  fi
 else
     # If no matching images are found, there is no need to push images
     PAYLOAD=$(jq -n \
@@ -551,20 +563,17 @@ else
     log "No images found - not pushing anywhere" "INFO"
 fi
 
-# Publish to MQTT
-if [ "${ENABLE_MQTT}" == "true" ]; then
-  log "MQTT enabled" "INFO"
-  PAYLOAD=$(jq -n \
-      --arg sat_number "$SAT_NUMBER" \
-      --arg pass_direction "$PASS_DIRECTION" \
-      --arg pass_side "$PASS_SIDE" \
-      --arg status "success" \
-      '{enable_mqtt: true, satellite: {number: $sat_number, direction: $pass_direction, side: $pass_side}, status: $status}')
-  "$SCRIPTS_DIR/mqtt.sh" "iotstack/antenna/data" "$PAYLOAD"
-fi
+
 
 # calculate and report total time for capture
 TIMER_END=$(date '+%s')
 DIFF=$(($TIMER_END - $TIMER_START))
 PROC_TIME=$(date -ud "@$DIFF" +'%H:%M.%S')
 log "Total processing time: ${PROC_TIME}" "INFO"
+PAYLOAD=$(jq -n \
+    --arg sat_number "$SAT_NUMBER" \
+    --arg pass_direction "$PASS_DIRECTION" \
+    --arg pass_side "$PASS_SIDE" \
+    --arg status "waiting" \
+    '{enable_mqtt: true, satellite: {number: $sat_number, direction: $pass_direction, side: $pass_side}, status: $status}')
+"$SCRIPTS_DIR/mqtt.sh" "iotstack/antenna/data" "$PAYLOAD"
