@@ -167,6 +167,15 @@ spectrogram=0
 polar_az_el=0
 polar_direction=0
 
+# Publish data
+PAYLOAD=$(jq -n \
+    --arg sat_number "$SAT_NUMBER" \
+    --arg pass_direction "$PASS_DIRECTION" \
+    --arg pass_side "$PASS_SIDE" \
+    --arg status "recording" \
+    '{enable_mqtt: true, satellite: {number: $sat_number, direction: $pass_direction, side: $pass_side}, status: $status}')
+"$SCRIPTS_DIR/mqtt.sh" "iotstack/antenna/data" "$PAYLOAD"
+
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 log "Recording ${NOAA_HOME} via $receiver at ${METEOR_FREQUENCY} MHz using SatDump record " "INFO"
