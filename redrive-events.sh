@@ -1,17 +1,25 @@
 #!/bin/bash
 
+# NOTE: Schema:
+# CREATE TABLE predict_passes(
+#     sat_name text not null,
+#     pass_start timestamp primary key default (strftime('%s', 'now')) not null,
+#     pass_end timestamp default (strftime('%s', 'now')) not null,
+#     max_elev int not null,
+#     is_active boolean, pass_start_azimuth int, direction text, azimuth_at_max int, at_job_id int not null default 0);
+
 DB_FILE="/home/pi/raspberry-noaa-v2/db/panel.db"
 
 
-scheduled_passes=$(sqlite3 $DB_FILE "SELECT OBJ_NAME, start_epoch_time, end_epoch_time, max_elev, starting_azimuth, azimuth_at_max, direction, at_job_id FROM predict_passes;")
+scheduled_passes=$(sqlite3 $DB_FILE "SELECT * FROM predict_passes;")
 
-while IFS='|' read -r OBJ_NAME start_epoch_time end_epoch_time max_elev starting_azimuth azimuth_at_max direction at_job_id; do
+while IFS='|' read -r sat_name pass_start pass_end max_elev is_active pass_start_azimuth direction azimuth_at_max at_job_id; do
     PAYLOAD=$(jq -n \
         --arg sat_name "$OBJ_NAME" \
         --arg pass_start "$start_epoch_time" \
         --arg pass_end "$end_epoch_time" \
         --arg max_elev "$max_elev" \
-        --arg is_active "1" \
+        --arg is_active "$is_active" \
         --arg pass_start_azimuth "$starting_azimuth" \
         --arg azimuth_at_max "$azimuth_at_max" \
         --arg direction "$direction" \
